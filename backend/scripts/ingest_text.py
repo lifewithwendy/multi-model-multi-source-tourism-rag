@@ -34,8 +34,26 @@ def main():
         for attr in attractions:
             if attr.description:
                 ids.append(attr.id)
-                # We prepend the name for richer context
-                text = f"{attr.name}\n{attr.description}"
+                # We prepend all available metadata for richer semantic context
+                text_parts = [
+                    f"Attraction Name: {attr.name}",
+                    f"Category: {attr.category}",
+                    f"Location: {attr.district}, {attr.province} Province, Sri Lanka"
+                ]
+                
+                if attr.best_season:
+                    text_parts.append(f"Best Season to Visit: {attr.best_season}")
+                if attr.trekking_difficulty:
+                    text_parts.append(f"Trekking Difficulty: {attr.trekking_difficulty}")
+                if attr.accessibility:
+                    text_parts.append(f"Accessibility: {attr.accessibility}")
+                if attr.entrance_fee_lkr is not None:
+                    text_parts.append(f"Entrance Fee: {attr.entrance_fee_lkr} LKR")
+                
+                text_parts.append(f"Description: {attr.description}")
+                text_parts.append(f"Keywords: tourism, travel, Sri Lanka, {attr.category}, {attr.district}")
+                
+                text = "\n".join(text_parts)
                 documents.append(text)
                 metadatas.append({
                     "name": attr.name,

@@ -7,6 +7,41 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")
 from backend.vector_db.embeddings import get_embedding_model
 from backend.vector_db.chroma_client import get_text_collection, get_image_collection
 
+def extract_category(query: str) -> str:
+    import os
+    import requests
+    
+    api_key = os.getenv("GROQ_API_KEY")
+    if not api_key:
+        return None
+        
+    prompt = f"""
+    You are a travel assistant for Sri Lanka. Extract the attraction category from the following user query.
+    Possible categories include: beach, mountain, waterfall, historical, temple, wildlife, city, etc.
+    Return ONLY the category word in lowercase. If no category is mentioned or implied, return the exact word "none".
+    Query: "{query}"
+    """
+    
+    try:
+        response = requests.post(
+            "https://api.groq.com/openai/v1/chat/completions",
+            headers={"Authorization": f"Bearer {api_key}"},
+            json={
+                "model": "llama-3.1-8b-instant",
+                "messages": [{"role": "user", "content": prompt}],
+                "temperature": 0,
+                "max_tokens": 10
+            }
+        )
+        if response.ok:
+            category = response.json()["choices"][0]["message"]["content"].strip().lower()
+            if category == "none" or category == "":
+                return None
+            return category
+    except Exception as e:
+        print(f"Error extracting category: {e}")
+    return None
+
 def main():
     if len(sys.argv) > 1:
         query = " ".join(sys.argv[1:])
@@ -14,6 +49,15 @@ def main():
         query = "beautiful waterfall for swimming and having a cup of tea"
         
     print(f"Query: '{query}'")
+    
+    extracted_category = extract_category(query)
+    where_filter = None
+    if extracted_category:
+        print(f"Extracted Category (LLM Filter): '{extracted_category}'")
+        where_filter = {"category": extracted_category}
+    else:
+        print("Extracted Category: None (Searching all categories)")
+        
     print("Initializing embedding model...")
     embedder = get_embedding_model()
     
@@ -24,7 +68,8 @@ def main():
     text_col = get_text_collection()
     text_results = text_col.query(
         query_embeddings=[query_embedding],
-        n_results=3
+        n_results=3,
+        where=where_filter
     )
     
     if text_results["ids"] and text_results["ids"][0]:
@@ -39,7 +84,8 @@ def main():
     img_col = get_image_collection()
     img_results = img_col.query(
         query_embeddings=[query_embedding],
-        n_results=3
+        n_results=3,
+        where=where_filter
     )
     
     if img_results["ids"] and img_results["ids"][0]:
