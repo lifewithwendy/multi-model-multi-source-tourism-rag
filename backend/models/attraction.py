@@ -8,6 +8,7 @@ get queried directly for "structured queries" (e.g. "waterfalls under 50m",
 The `id` here is the same id used as the Chroma document id, so retrieval
 results can be joined back to full structured rows.
 """
+import uuid
 from sqlalchemy import Column, Integer, String, Float, Text
 from backend.database.connection import Base
 
@@ -15,7 +16,7 @@ from backend.database.connection import Base
 class Attraction(Base):
     __tablename__ = "attractions"
 
-    id = Column(Integer, primary_key=True)
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     name = Column(String(200), nullable=False, index=True)
     category = Column(String(50), nullable=False, index=True)  # waterfall | mountain | beach
     district = Column(String(100))

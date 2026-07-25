@@ -9,10 +9,14 @@ re-run whenever your data changes (e.g. after Day 1 image sourcing fills
 in more fields).
 """
 import csv
+import uuid
 from backend.database.connection import SessionLocal, engine, Base
 from backend.models.attraction import Attraction
 
 CSV_PATH = "data/seed_data_full.csv"
+
+# Custom namespace for deterministic UUID generation
+NAMESPACE_TOURISM = uuid.UUID("12345678-1234-5678-1234-567812345678")
 
 
 def parse_float(value):
@@ -38,8 +42,9 @@ def main():
             reader = csv.DictReader(f)
             count = 0
             for row in reader:
+                attraction_id = str(uuid.uuid5(NAMESPACE_TOURISM, str(row["id"])))
                 attraction = Attraction(
-                    id=int(row["id"]),
+                    id=attraction_id,
                     name=row["name"],
                     category=row["category"],
                     district=row["district"],

@@ -8,6 +8,8 @@ from backend.database.connection import engine, Base
 from backend.models import attraction  # noqa: F401 -- import so Base knows about the model
 
 if __name__ == "__main__":
+    print("Dropping old tables...")
+    Base.metadata.drop_all(bind=engine)
     print("Creating tables...")
     Base.metadata.create_all(bind=engine)
     print("Done. 'attractions' table is ready in Neon.")
