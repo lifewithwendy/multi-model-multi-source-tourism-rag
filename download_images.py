@@ -9,7 +9,7 @@ base_dir = r"e:\Personal\Tourism-Rag\multi-model-multi-source-tourism-rag"
 md_path = os.path.join(base_dir, "data", "images", "ATTRIBUTIONS.md")
 img_base_dir = os.path.join(base_dir, "data", "images")
 
-USER_AGENT = 'TourismRagBot/1.0 (test@example.com) Python-urllib'
+USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
 WIKIMEDIA_REFERER = 'https://commons.wikimedia.org/'
 
 def search_wikimedia_images(query, count=2):
