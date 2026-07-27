@@ -34,22 +34,20 @@ class JinaProvider:
     def __init__(self, api_key: str):
         self.api_key = api_key
         self.url = "https://api.jina.ai/v1/embeddings"
-        self.headers = {
+        self.session = requests.Session()
+        self.session.headers.update({
             "Authorization": f"Bearer {self.api_key}",
             "Content-Type": "application/json"
-        }
+        })
         
     def embed_text(self, texts: list[str]) -> list[list[float]]:
         if not texts:
             return []
-        # Jina requires a flat list of dictionaries for multimodal inputs: [{"text": ...}]
-        # Wait, the Jina API for jina-clip-v1 requires either list of strings or list of dicts.
-        # It's safer to use list of dicts: {"text": t}
         data = {
             "model": "jina-clip-v1",
             "input": [{"text": t} for t in texts]
         }
-        response = requests.post(self.url, headers=self.headers, json=data)
+        response = self.session.post(self.url, json=data)
         if not response.ok:
             raise RuntimeError(f"Jina API error: {response.text}")
         res_json = response.json()
@@ -60,6 +58,7 @@ class JinaProvider:
             return []
             
         import io
+        import time
         from PIL import Image
         
         all_embeddings = []
@@ -71,9 +70,7 @@ class JinaProvider:
             for path in batch_paths:
                 try:
                     with Image.open(path) as img:
-                        # Convert to RGB to avoid issues with PNGs/alpha channels
                         img = img.convert("RGB")
-                        # Resize if too large to fit in Jina payload
                         img.thumbnail((512, 512))
                         
                         buffer = io.BytesIO()
@@ -90,12 +87,25 @@ class JinaProvider:
                 "model": "jina-clip-v1",
                 "input": inputs
             }
-            response = requests.post(self.url, headers=self.headers, json=data)
-            if not response.ok:
-                raise RuntimeError(f"Jina API error: {response.text}")
+            
+            # Retry mechanism for robust connection handling
+            for attempt in range(3):
+                try:
+                    response = self.session.post(self.url, json=data)
+                    if not response.ok:
+                        raise RuntimeError(f"Jina API error: {response.text}")
+                    break # Success
+                except requests.exceptions.ConnectionError as e:
+                    if attempt == 2:
+                        raise e
+                    time.sleep(2) # Wait before retry
+                    
             res_json = response.json()
             batch_embeddings = [item["embedding"] for item in res_json["data"]]
             all_embeddings.extend(batch_embeddings)
+            
+            # Tiny sleep to avoid aggressive rate limiting
+            time.sleep(0.2)
             
         return all_embeddings
 

@@ -48,12 +48,22 @@ def main():
                     doc_id = f"{attr.id}_{idx}"
                     ids.append(doc_id)
                     image_paths.append(img_path)
-                    metadatas.append({
+                    base_meta = {
                         "attraction_id": attr.id,
                         "name": attr.name,
                         "category": attr.category,
                         "image_filename": img_filename
-                    })
+                    }
+                    
+                    # Add filterable fields (ChromaDB does not accept None values in metadata)
+                    if attr.district: base_meta["district"] = attr.district
+                    if attr.province: base_meta["province"] = attr.province
+                    if attr.height_m is not None: base_meta["height_m"] = float(attr.height_m)
+                    if attr.trekking_difficulty: base_meta["trekking_difficulty"] = attr.trekking_difficulty
+                    if attr.entrance_fee_lkr is not None: base_meta["entrance_fee_lkr"] = float(attr.entrance_fee_lkr)
+                    if attr.best_season: base_meta["best_season"] = attr.best_season
+                    
+                    metadatas.append(base_meta)
                 else:
                     missing_images[attr.category].append(img_filename)
                     
@@ -75,7 +85,7 @@ def main():
         print("Generating image embeddings (this might take a while depending on the provider...)")
         embeddings = embedder.embed_images(image_paths)
         
-        print("Upserting into ChromaDB image_kb...")
+        print(f"Upserting into ChromaDB {collection.name}...")
         collection.upsert(
             ids=ids,
             embeddings=embeddings,

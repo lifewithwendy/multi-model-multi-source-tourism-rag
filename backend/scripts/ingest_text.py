@@ -55,15 +55,25 @@ def main():
                 
                 text = "\n".join(text_parts)
                 documents.append(text)
-                metadatas.append({
+                base_meta = {
                     "name": attr.name,
                     "category": attr.category
-                })
+                }
+                
+                # Add filterable fields (ChromaDB does not accept None values in metadata)
+                if attr.district: base_meta["district"] = attr.district
+                if attr.province: base_meta["province"] = attr.province
+                if attr.height_m is not None: base_meta["height_m"] = float(attr.height_m)
+                if attr.trekking_difficulty: base_meta["trekking_difficulty"] = attr.trekking_difficulty
+                if attr.entrance_fee_lkr is not None: base_meta["entrance_fee_lkr"] = float(attr.entrance_fee_lkr)
+                if attr.best_season: base_meta["best_season"] = attr.best_season
+                
+                metadatas.append(base_meta)
         
         print(f"Computed texts for {len(documents)} attractions. Generating embeddings...")
         embeddings = embedder.embed_text(documents)
         
-        print("Upserting into ChromaDB text_kb...")
+        print(f"Upserting into ChromaDB {collection.name}...")
         collection.upsert(
             ids=ids,
             embeddings=embeddings,

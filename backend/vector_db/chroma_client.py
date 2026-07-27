@@ -25,8 +25,9 @@ def get_text_collection():
     Returns the Chroma collection for text embeddings (descriptions).
     Creates it if it doesn't exist.
     """
+    provider = os.getenv("EMBEDDING_PROVIDER", "local").lower()
     return client.get_or_create_collection(
-        name="text_kb",
+        name=f"text_kb_{provider}",
         metadata={"hnsw:space": "cosine"} # Use cosine similarity
     )
 
@@ -35,7 +36,8 @@ def get_image_collection():
     Returns the Chroma collection for image embeddings (CLIP).
     Creates it if it doesn't exist.
     """
+    provider = os.getenv("EMBEDDING_PROVIDER", "local").lower()
     return client.get_or_create_collection(
-        name="image_kb",
+        name=f"image_kb_{provider}",
         metadata={"hnsw:space": "cosine"} # Use cosine similarity
     )

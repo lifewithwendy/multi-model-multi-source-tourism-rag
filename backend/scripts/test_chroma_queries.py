@@ -64,8 +64,8 @@ def main():
     print("Embedding query...")
     query_embedding = embedder.embed_text([query])[0]
     
-    print("\n=== TEXT KB RESULTS ===")
     text_col = get_text_collection()
+    print(f"\n=== {text_col.name.upper()} RESULTS ===")
     text_results = text_col.query(
         query_embeddings=[query_embedding],
         n_results=3,
@@ -80,8 +80,8 @@ def main():
     else:
         print("No results found. Did you run ingest_text.py?")
         
-    print("\n=== IMAGE KB RESULTS ===")
     img_col = get_image_collection()
+    print(f"\n=== {img_col.name.upper()} RESULTS ===")
     img_results = img_col.query(
         query_embeddings=[query_embedding],
         n_results=3,
