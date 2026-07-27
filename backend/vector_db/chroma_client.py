@@ -4,10 +4,21 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-CHROMA_PERSIST_DIR = os.getenv("CHROMA_PERSIST_DIR", "./chroma_data")
+_env_path = os.getenv("CHROMA_PERSIST_DIR", "./chroma_data")
+if not os.path.isabs(_env_path):
+    # Resolve relative paths against the backend directory, not the current working directory
+    backend_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+    CHROMA_PERSIST_DIR = os.path.normpath(os.path.join(backend_dir, _env_path))
+else:
+    CHROMA_PERSIST_DIR = _env_path
+
+from chromadb.config import Settings
 
 # Initialize Chroma persistent client
-client = chromadb.PersistentClient(path=CHROMA_PERSIST_DIR)
+client = chromadb.PersistentClient(
+    path=CHROMA_PERSIST_DIR,
+    settings=Settings(anonymized_telemetry=False)
+)
 
 def get_text_collection():
     """
