@@ -1,8 +1,11 @@
 import os
 import tempfile
 import shutil
+import logging
 from typing import List, Dict, Any, Optional
 from sqlalchemy.orm import Session
+
+logger = logging.getLogger(__name__)
 
 from backend.models.attraction import Attraction
 from backend.vector_db.chroma_client import get_text_collection, get_image_collection
@@ -72,6 +75,7 @@ CRITICAL RULES:
         """
         Query the Postgres database directly using structured filters. No vector search involved.
         """
+        logger.info(f"Structured search initiated: category={category}, district={district}, max_fee={max_fee}, difficulty={difficulty}")
         query = db.query(Attraction)
         if category:
             query = query.filter(Attraction.category.ilike(category))
@@ -83,6 +87,7 @@ CRITICAL RULES:
             query = query.filter(Attraction.trekking_difficulty.ilike(difficulty))
 
         results = query.all()
+        logger.info(f"Structured search found {len(results)} attractions.")
         response = {"results": [r.to_dict() for r in results]}
 
         if generate_answer:
@@ -92,6 +97,7 @@ CRITICAL RULES:
                 response["answer"] = "No matching attractions found to answer your question."
             else:
                 context = cls.format_context(results)
+                logger.info(f"Structured RAG answering: question='{question}' using {len(results)} records context")
                 response["answer"] = cls._get_rag_chain().invoke({"context": context, "question": question})
 
         return response
@@ -108,6 +114,7 @@ CRITICAL RULES:
         """
         Semantic search over attraction text descriptions.
         """
+        logger.info(f"Semantic search initiated: query='{query}', top_k={top_k}")
         try:
             query_embedding = embedder.embed_text([query])[0]
         except Exception as e:
@@ -125,11 +132,13 @@ CRITICAL RULES:
         # Sort results to match Chroma's distance order
         id_to_attr = {str(attr.id): attr for attr in results}
         sorted_results = [id_to_attr[i] for i in ids if i in id_to_attr]
+        logger.info(f"Semantic search found {len(sorted_results)} matching attractions.")
 
         response = {"results": [r.to_dict() for r in sorted_results]}
 
         if generate_answer:
             context = cls.format_context(sorted_results)
+            logger.info("Semantic RAG answering...")
             response["answer"] = cls._get_rag_chain().invoke({"context": context, "question": query})
 
         return response
@@ -148,6 +157,7 @@ CRITICAL RULES:
         """
         Search the image vector collection using either an uploaded image OR a descriptive text string.
         """
+        logger.info(f"Image search initiated: has_file={file is not None}, text_query='{text_query}', top_k={top_k}")
         if not file and not text_query:
             raise ValueError("Must provide either an uploaded 'file' or a 'text_query'")
 
@@ -181,6 +191,7 @@ CRITICAL RULES:
         attr_ids = list(set([str(i).split('_')[0] for i in search_res["ids"][0]]))
 
         results = db.query(Attraction).filter(Attraction.id.in_(attr_ids)).all()
+        logger.info(f"Image search found {len(results)} matching attractions.")
 
         response = {"results": [r.to_dict() for r in results]}
 
@@ -188,6 +199,7 @@ CRITICAL RULES:
             # Fallback question if none provided
             llm_question = question if question else "Please describe these matching attractions based on the context."
             context = cls.format_context(results)
+            logger.info("Image RAG answering...")
             response["answer"] = cls._get_rag_chain().invoke({"context": context, "question": llm_question})
 
         return response
@@ -214,6 +226,7 @@ CRITICAL RULES:
                 "Must provide either a 'query' string, an uploaded 'file', or structured filters"
             )
 
+        logger.info(f"Hybrid query initiated: query='{query}', has_file={file is not None}")
         # 1. Classify the query
         decision = classify_query(query or "", has_image_file=(file is not None))
 
@@ -293,6 +306,7 @@ CRITICAL RULES:
                 attraction_sources.setdefault(attr.id, []).append("image")
 
         attractions_list = list(unique_attractions.values())
+        logger.info(f"Deduplicated hybrid search resolved to {len(attractions_list)} unique attractions.")
 
         # 4. Generate answer or return fallback
         if not attractions_list:
@@ -301,6 +315,7 @@ CRITICAL RULES:
             context = cls.format_context(attractions_list)
             # Use query if provided, else fall back to a generic prompt
             llm_question = query if query else "Describe the matching attractions visually similar to the uploaded image."
+            logger.info(f"Hybrid RAG answering using merged context...")
             response["answer"] = cls._get_rag_chain().invoke({"context": context, "question": llm_question})
 
         # 5. Format response payload

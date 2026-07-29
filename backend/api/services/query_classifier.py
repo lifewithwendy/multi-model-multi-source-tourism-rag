@@ -1,8 +1,11 @@
 import os
 import re
 import json
+import logging
 from typing import Dict, Any, Optional
 from groq import Groq
+
+logger = logging.getLogger(__name__)
 
 # Lists of known entities in Sri Lanka tourism data for rule-based matching
 DISTRICTS = [
@@ -141,7 +144,7 @@ Your job is to classify the user's natural language search query and extract str
             "reason": result.reason
         }
     except Exception as e:
-        print(f"LLM Classification failed, falling back to rule-based. Error: {e}")
+        logger.warning(f"LLM Classification failed, falling back to rule-based. Error: {e}")
         
     return None
 
@@ -150,21 +153,25 @@ def classify_query(query: str, has_image_file: bool = False) -> Dict[str, Any]:
     Main query classifier entrypoint. Uses LLM-based classification as primary,
     and falls back to rule-based keyword matching if LLM fails or is unavailable.
     """
+    logger.info(f"Classifying query: '{query}' (has_image_file={has_image_file})")
     if not query.strip():
         # If query is empty but an image is uploaded
-        return {
+        decision = {
             "structured": False,
             "semantic": False,
             "image": True,
             "structured_filters": {},
             "reason": "Only an image file was provided." if has_image_file else "Empty query."
         }
+        logger.info(f"Classification decision: {decision}")
+        return decision
         
     # Attempt LLM classification
     decision = classify_query_llm(query)
     
     # Fallback to rule-based if LLM didn't return a valid dict
     if not decision:
+        logger.info("Using rule-based query classifier fallback.")
         decision = classify_query_rule_based(query)
         
     # If a physical image file was uploaded, we MUST run image search regardless of query text
@@ -172,4 +179,5 @@ def classify_query(query: str, has_image_file: bool = False) -> Dict[str, Any]:
         decision["image"] = True
         decision["reason"] += " (Forced image search due to uploaded file)"
         
+    logger.info(f"Classification decision: structured={decision['structured']}, semantic={decision['semantic']}, image={decision['image']}. Reason: {decision['reason']}")
     return decision
