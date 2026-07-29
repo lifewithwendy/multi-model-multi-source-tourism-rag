@@ -6,12 +6,41 @@ from sqlalchemy.orm import Session
 
 from backend.models.attraction import Attraction
 from backend.vector_db.chroma_client import get_text_collection, get_image_collection
-from backend.llm.groq_client import generate_rag_response
 from backend.api.services.query_classifier import classify_query
 from backend.api.services.retrieval import retrieve_structured, retrieve_semantic, retrieve_image
 
+from langchain_groq import ChatGroq
+from langchain_core.prompts import ChatPromptTemplate
+from langchain_core.output_parsers import StrOutputParser
+
 
 class QueryService:
+    @classmethod
+    def _get_rag_chain(cls):
+        """Helper to build a LangChain RAG pipeline using ChatGroq and StrOutputParser."""
+        api_key = os.getenv("GROQ_API_KEY")
+        model_name = os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile")
+        
+        llm = ChatGroq(api_key=api_key, model=model_name, temperature=0.0)
+        
+        system_prompt = """
+You are an expert Sri Lanka tourism assistant. 
+Your goal is to answer the user's question based STRICTLY on the provided context.
+The context contains structured data and descriptions about various tourist attractions (waterfalls, mountains, beaches).
+
+CRITICAL RULES:
+1. Answer ONLY using the information provided in the Context below. Do not use your pre-trained outside knowledge.
+2. ALWAYS cite the specific attraction name(s) you are referencing in your answer.
+3. If the context does not contain enough information to answer the question, you must explicitly say: "I do not have enough information to answer that based on the provided context."
+4. Be concise, helpful, and format your response clearly.
+"""
+        prompt = ChatPromptTemplate.from_messages([
+            ("system", system_prompt),
+            ("user", "Context:\n{context}\n\nQuestion:\n{question}")
+        ])
+        
+        return prompt | llm | StrOutputParser()
+
     @staticmethod
     def format_context(attractions: List[Attraction]) -> str:
         """Helper to convert structured Postgres data into a text context for the LLM."""
@@ -63,7 +92,7 @@ class QueryService:
                 response["answer"] = "No matching attractions found to answer your question."
             else:
                 context = cls.format_context(results)
-                response["answer"] = generate_rag_response(context, question)
+                response["answer"] = cls._get_rag_chain().invoke({"context": context, "question": question})
 
         return response
 
@@ -101,7 +130,7 @@ class QueryService:
 
         if generate_answer:
             context = cls.format_context(sorted_results)
-            response["answer"] = generate_rag_response(context, query)
+            response["answer"] = cls._get_rag_chain().invoke({"context": context, "question": query})
 
         return response
 
@@ -159,7 +188,7 @@ class QueryService:
             # Fallback question if none provided
             llm_question = question if question else "Please describe these matching attractions based on the context."
             context = cls.format_context(results)
-            response["answer"] = generate_rag_response(context, llm_question)
+            response["answer"] = cls._get_rag_chain().invoke({"context": context, "question": llm_question})
 
         return response
 
@@ -272,11 +301,11 @@ class QueryService:
             context = cls.format_context(attractions_list)
             # Use query if provided, else fall back to a generic prompt
             llm_question = query if query else "Describe the matching attractions visually similar to the uploaded image."
-            answer = generate_rag_response(context, llm_question)
+            response["answer"] = cls._get_rag_chain().invoke({"context": context, "question": llm_question})
 
         # 5. Format response payload
         response = {
-            "answer": answer,
+            "answer": response.get("answer", "No matching attractions found to answer your query."),
             "sources_used": sources_used,
             "attraction_sources": attraction_sources,
             "raw_results": {

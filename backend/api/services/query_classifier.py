@@ -80,51 +80,66 @@ def classify_query_rule_based(query: str) -> Dict[str, Any]:
         "reason": reason
     }
 
+from pydantic import BaseModel, Field
+from langchain_groq import ChatGroq
+from langchain_core.prompts import ChatPromptTemplate
+
+class StructuredFiltersSchema(BaseModel):
+    category: Optional[str] = Field(default=None, description="Category filter: 'waterfall', 'mountain', or 'beach'")
+    district: Optional[str] = Field(default=None, description="District filter: e.g. Kandy, Galle, Badulla, Nuwara Eliya, etc.")
+    max_fee: Optional[float] = Field(default=None, description="maximum entrance fee in LKR")
+    difficulty: Optional[str] = Field(default=None, description="trekking difficulty: 'Easy', 'Moderate', or 'Strenuous'")
+
+class ClassificationSchema(BaseModel):
+    structured: bool = Field(description="true if user query explicitly specifies filters like category, district, max entrance fee, or trekking difficulty")
+    semantic: bool = Field(description="true if the query is a descriptive natural language query suitable for semantic vector search")
+    image: bool = Field(description="true if the query asks for visual aspects, photos, images, views, or visual similarities")
+    structured_filters: Optional[StructuredFiltersSchema] = Field(default=None, description="Structured filters extracted from query")
+    reason: str = Field(description="concise explanation of the classification decision")
+
 def classify_query_llm(query: str) -> Optional[Dict[str, Any]]:
     """
-    Classifies query using a fast LLM call (llama-3.1-8b-instant) returning structured JSON.
+    Classifies query using a fast LLM call (llama-3.1-8b-instant) returning structured JSON via LangChain.
     """
     api_key = os.getenv("GROQ_API_KEY")
     if not api_key:
         return None
         
     try:
-        client = Groq(api_key=api_key)
+        llm = ChatGroq(api_key=api_key, model="llama-3.1-8b-instant", temperature=0.0)
+        structured_llm = llm.with_structured_output(ClassificationSchema)
         
         system_prompt = """
 You are a fast, accurate query classifier for a Sri Lanka tourism RAG system.
 Your job is to classify the user's natural language search query and extract structured filters if present.
-You MUST respond with a valid JSON object ONLY. Do not output any prose, markdown blocks, or extra text.
-
-JSON Schema:
-{
-  "structured": boolean, // true if user query explicitly specifies filters like category, district, max entrance fee, or trekking difficulty
-  "semantic": boolean, // true if the query is a descriptive natural language query suitable for semantic vector search
-  "image": boolean, // true if the query asks for visual aspects, photos, images, views, or visual similarities (e.g. "what does it look like", "show a photo of...")
-  "structured_filters": {
-    "category": string or null, // "waterfall", "mountain", or "beach"
-    "district": string or null, // e.g. "Kandy", "Galle", "Badulla", "Nuwara Eliya", "Matara", etc.
-    "max_fee": number or null, // maximum entrance fee in LKR (e.g. if query says "under 1000 LKR", this is 1000)
-    "difficulty": string or null // "Easy", "Moderate", or "Strenuous"
-  },
-  "reason": string // concise explanation of the classification decision
-}
 """
+        prompt = ChatPromptTemplate.from_messages([
+            ("system", system_prompt),
+            ("user", "Query: {query}")
+        ])
         
-        response = client.chat.completions.create(
-            model="llama-3.1-8b-instant",
-            messages=[
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": f"Query: {query}"}
-            ],
-            response_format={"type": "json_object"},
-            temperature=0.0,
-            max_tokens=256
-        )
+        chain = prompt | structured_llm
+        result = chain.invoke({"query": query})
         
-        if response.choices and len(response.choices) > 0:
-            content = response.choices[0].message.content
-            return json.loads(content)
+        # Convert back to the expected dictionary format
+        filters_dict = {}
+        if result.structured_filters:
+            if result.structured_filters.category:
+                filters_dict["category"] = result.structured_filters.category
+            if result.structured_filters.district:
+                filters_dict["district"] = result.structured_filters.district
+            if result.structured_filters.max_fee is not None:
+                filters_dict["max_fee"] = result.structured_filters.max_fee
+            if result.structured_filters.difficulty:
+                filters_dict["difficulty"] = result.structured_filters.difficulty
+                
+        return {
+            "structured": result.structured,
+            "semantic": result.semantic,
+            "image": result.image,
+            "structured_filters": filters_dict,
+            "reason": result.reason
+        }
     except Exception as e:
         print(f"LLM Classification failed, falling back to rule-based. Error: {e}")
         

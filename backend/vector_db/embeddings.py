@@ -2,10 +2,11 @@ import os
 import base64
 import requests
 from dotenv import load_dotenv
+from langchain_core.embeddings import Embeddings
 
 load_dotenv()
 
-class LocalProvider:
+class LocalProvider(Embeddings):
     def __init__(self):
         print("Loading local CLIP model (this might take a moment on first run)...")
         from sentence_transformers import SentenceTransformer
@@ -28,9 +29,15 @@ class LocalProvider:
         images = [self.Image.open(p) for p in image_paths]
         embeddings = self.model.encode(images)
         return embeddings.tolist()
+    def embed_documents(self, texts: list[str]) -> list[list[float]]:
+        return self.embed_text(texts)
+        
+    def embed_query(self, text: str) -> list[float]:
+        res = self.embed_text([text])
+        return res[0] if res else []
 
 
-class JinaProvider:
+class JinaProvider(Embeddings):
     def __init__(self, api_key: str):
         self.api_key = api_key
         self.url = "https://api.jina.ai/v1/embeddings"
@@ -108,6 +115,13 @@ class JinaProvider:
             time.sleep(0.2)
             
         return all_embeddings
+
+    def embed_documents(self, texts: list[str]) -> list[list[float]]:
+        return self.embed_text(texts)
+        
+    def embed_query(self, text: str) -> list[float]:
+        res = self.embed_text([text])
+        return res[0] if res else []
 
 
 def get_embedding_model():

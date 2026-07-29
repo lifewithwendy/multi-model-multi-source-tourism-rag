@@ -1,20 +1,22 @@
 import os
-from groq import Groq
+from langchain_groq import ChatGroq
+from langchain_core.prompts import ChatPromptTemplate
+from langchain_core.output_parsers import StrOutputParser
 
 def generate_rag_response(context: str, question: str) -> str:
     """
-    Calls the Groq API to generate an answer based on the retrieved context.
+    Calls the Groq API using LangChain ChatGroq to generate an answer based on the retrieved context.
     """
     api_key = os.getenv("GROQ_API_KEY")
     if not api_key:
         return "Error: GROQ_API_KEY not set in environment."
         
-    model = os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile")
+    model_name = os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile")
     
     try:
-        client = Groq(api_key=api_key)
+        llm = ChatGroq(api_key=api_key, model=model_name, temperature=0.0)
     except Exception as e:
-        return f"Failed to initialize Groq client: {str(e)}"
+        return f"Failed to initialize ChatGroq model: {str(e)}"
     
     system_prompt = """
 You are an expert Sri Lanka tourism assistant. 
@@ -27,22 +29,15 @@ CRITICAL RULES:
 3. If the context does not contain enough information to answer the question, you must explicitly say: "I do not have enough information to answer that based on the provided context."
 4. Be concise, helpful, and format your response clearly.
 """
+
+    prompt = ChatPromptTemplate.from_messages([
+        ("system", system_prompt),
+        ("user", "Context:\n{context}\n\nQuestion:\n{question}")
+    ])
     
-    user_prompt = f"Context:\n{context}\n\nQuestion:\n{question}"
+    chain = prompt | llm | StrOutputParser()
     
     try:
-        response = client.chat.completions.create(
-            model=model,
-            messages=[
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": user_prompt}
-            ],
-            temperature=0.0,
-            max_tokens=1024
-        )
-        if response.choices and len(response.choices) > 0:
-            return response.choices[0].message.content
-        return "Error: Received an empty response from the LLM."
+        return chain.invoke({"context": context, "question": question})
     except Exception as e:
-        # Handle rate limits, API downtime, etc gracefully
         return f"LLM Generation Error: {str(e)}"
