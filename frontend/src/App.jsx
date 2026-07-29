@@ -1,5 +1,11 @@
 import { useState } from 'react'
 import './App.css'
+import Header from './components/Header'
+import ModeSelector from './components/ModeSelector'
+import StructuredFilters from './components/StructuredFilters'
+import ImageFilters from './components/ImageFilters'
+import Presets from './components/Presets'
+import ResultsView from './components/ResultsView'
 
 function App() {
   const [queryMode, setQueryMode] = useState('hybrid') // hybrid | structured | semantic | image
@@ -197,258 +203,61 @@ function App() {
 
   return (
     <div className="app-container">
-      <header className="app-header">
-        <div className="badge-sri-lanka">🇱🇰 Sri Lanka Tourism</div>
-        <h1>Multimodal Hybrid RAG</h1>
-        <p className="subtitle">
-          Query structured Postgres data, semantic descriptions, and visual image collections using AI
-        </p>
-      </header>
+      <Header />
 
       <main className="main-content">
-        {/* Mode Selector Tabs */}
-        <div className="mode-selector-container card glass">
-          <h3>Select Query Mode</h3>
-          <div className="mode-tabs">
-            <button
-              onClick={() => { setQueryMode('hybrid'); setError(''); }}
-              className={`mode-btn ${queryMode === 'hybrid' ? 'active' : ''}`}
-            >
-              🧠 Hybrid Mode
-            </button>
-            <button
-              onClick={() => { setQueryMode('structured'); setError(''); }}
-              className={`mode-btn ${queryMode === 'structured' ? 'active' : ''}`}
-            >
-              📊 Structured Mode
-            </button>
-            <button
-              onClick={() => { setQueryMode('semantic'); setError(''); }}
-              className={`mode-btn ${queryMode === 'semantic' ? 'active' : ''}`}
-            >
-              📖 Semantic Mode
-            </button>
-            <button
-              onClick={() => { setQueryMode('image'); setError(''); }}
-              className={`mode-btn ${queryMode === 'image' ? 'active' : ''}`}
-            >
-              🖼️ Image Mode
-            </button>
-          </div>
-        </div>
+        <ModeSelector 
+          queryMode={queryMode} 
+          setQueryMode={setQueryMode} 
+          setError={setError} 
+        />
 
         <div className="search-section card glass">
           <form onSubmit={handleSubmit} className="search-form">
-            {/* Context-specific input forms */}
             {queryMode === 'structured' && (
-              <div className="structured-filters-grid">
-                <div className="form-group">
-                  <label htmlFor="category-select">Category</label>
-                  <select
-                    id="category-select"
-                    value={categoryFilter}
-                    onChange={(e) => setCategoryFilter(e.target.value)}
-                    className="input-select"
-                  >
-                    <option value="">Any Category</option>
-                    <option value="Waterfall">Waterfall</option>
-                    <option value="Mountain">Mountain</option>
-                    <option value="beach">Beach</option>
-                  </select>
-                </div>
-
-                <div className="form-group">
-                  <label htmlFor="district-select">District</label>
-                  <select
-                    id="district-select"
-                    value={districtFilter}
-                    onChange={(e) => setDistrictFilter(e.target.value)}
-                    className="input-select"
-                  >
-                    <option value="">Any District</option>
-                    <option value="Badulla">Badulla</option>
-                    <option value="Nuwara Eliya">Nuwara Eliya</option>
-                    <option value="Ratnapura">Ratnapura</option>
-                    <option value="Kegalle">Kegalle</option>
-                    <option value="Kandy">Kandy</option>
-                    <option value="Matale">Matale</option>
-                    <option value="Matara">Matara</option>
-                    <option value="Galle">Galle</option>
-                    <option value="Ampara">Ampara</option>
-                    <option value="Trincomalee">Trincomalee</option>
-                    <option value="Batticaloa">Batticaloa</option>
-                    <option value="Hambantota">Hambantota</option>
-                    <option value="Gampaha">Gampaha</option>
-                    <option value="Puttalam">Puttalam</option>
-                  </select>
-                </div>
-
-                <div className="form-group">
-                  <label htmlFor="max-fee-input">Max Entrance Fee (LKR)</label>
-                  <input
-                    id="max-fee-input"
-                    type="number"
-                    value={maxFeeFilter}
-                    placeholder="e.g. 500"
-                    onChange={(e) => setMaxFeeFilter(e.target.value)}
-                    className="input-text"
-                  />
-                </div>
-
-                <div className="form-group">
-                  <label htmlFor="difficulty-select">Difficulty</label>
-                  <select
-                    id="difficulty-select"
-                    value={difficultyFilter}
-                    onChange={(e) => setDifficultyFilter(e.target.value)}
-                    className="input-select"
-                  >
-                    <option value="">Any Difficulty</option>
-                    <option value="Easy">Easy</option>
-                    <option value="Moderate">Moderate</option>
-                    <option value="Strenuous">Strenuous</option>
-                  </select>
-                </div>
-              </div>
+              <StructuredFilters
+                categoryFilter={categoryFilter}
+                setCategoryFilter={setCategoryFilter}
+                districtFilter={districtFilter}
+                setDistrictFilter={setDistrictFilter}
+                maxFeeFilter={maxFeeFilter}
+                setMaxFeeFilter={setMaxFeeFilter}
+                difficultyFilter={difficultyFilter}
+                setDifficultyFilter={setDifficultyFilter}
+              />
             )}
 
             {queryMode === 'image' && (
-              <div className="form-row">
-                <div className="form-group flex-2">
-                  <label>Upload Reference Image</label>
-                  <div className={`file-upload-zone ${file ? 'has-file' : ''}`}>
-                    <input
-                      type="file"
-                      accept="image/*"
-                      onChange={handleFileChange}
-                      className="file-input-hidden"
-                      id="file-upload"
-                    />
-                    <label htmlFor="file-upload" className="file-upload-label">
-                      {file ? (
-                        <div className="file-info">
-                          <span className="file-icon">🖼️</span>
-                          <span className="file-name">{file.name}</span>
-                          <button type="button" onClick={handleClearFile} className="btn-clear-file">✕</button>
-                        </div>
-                      ) : (
-                        <span className="placeholder-text">Click to choose or drag reference image here</span>
-                      )}
-                    </label>
-                  </div>
-                </div>
-
-                <div className="form-group flex-1">
-                  <label htmlFor="text-query-input">Or Describe Visuals (Text-to-Image)</label>
-                  <input
-                    id="text-query-input"
-                    type="text"
-                    value={textQueryFilter}
-                    onChange={(e) => setTextQueryFilter(e.target.value)}
-                    placeholder="e.g. golden sand palm trees"
-                    className="input-text"
-                  />
-                </div>
-              </div>
+              <ImageFilters
+                file={file}
+                handleFileChange={handleFileChange}
+                handleClearFile={handleClearFile}
+                textQueryFilter={textQueryFilter}
+                setTextQueryFilter={setTextQueryFilter}
+              />
             )}
 
             {queryMode === 'hybrid' && (
               <>
-                <div className="form-row">
-                  <div className="form-group flex-2">
-                    <label>Upload Reference Image (Optional)</label>
-                    <div className={`file-upload-zone ${file ? 'has-file' : ''}`}>
-                      <input
-                        type="file"
-                        accept="image/*"
-                        onChange={handleFileChange}
-                        className="file-input-hidden"
-                        id="file-upload"
-                      />
-                      <label htmlFor="file-upload" className="file-upload-label">
-                        {file ? (
-                          <div className="file-info">
-                            <span className="file-icon">🖼️</span>
-                            <span className="file-name">{file.name}</span>
-                            <button type="button" onClick={handleClearFile} className="btn-clear-file">✕</button>
-                          </div>
-                        ) : (
-                          <span className="placeholder-text">Click to choose or drag image here</span>
-                        )}
-                      </label>
-                    </div>
-                  </div>
-                </div>
+                <ImageFilters
+                  file={file}
+                  handleFileChange={handleFileChange}
+                  handleClearFile={handleClearFile}
+                  textQueryFilter={textQueryFilter}
+                  setTextQueryFilter={setTextQueryFilter}
+                  showTextQuery={false}
+                />
 
-                <div className="structured-filters-grid">
-                  <div className="form-group">
-                    <label htmlFor="category-select">Category</label>
-                    <select
-                      id="category-select"
-                      value={categoryFilter}
-                      onChange={(e) => setCategoryFilter(e.target.value)}
-                      className="input-select"
-                    >
-                      <option value="">Any Category</option>
-                      <option value="Waterfall">Waterfall</option>
-                      <option value="Mountain">Mountain</option>
-                      <option value="beach">Beach</option>
-                    </select>
-                  </div>
-
-                  <div className="form-group">
-                    <label htmlFor="district-select">District</label>
-                    <select
-                      id="district-select"
-                      value={districtFilter}
-                      onChange={(e) => setDistrictFilter(e.target.value)}
-                      className="input-select"
-                    >
-                      <option value="">Any District</option>
-                      <option value="Badulla">Badulla</option>
-                      <option value="Nuwara Eliya">Nuwara Eliya</option>
-                      <option value="Ratnapura">Ratnapura</option>
-                      <option value="Kegalle">Kegalle</option>
-                      <option value="Kandy">Kandy</option>
-                      <option value="Matale">Matale</option>
-                      <option value="Matara">Matara</option>
-                      <option value="Galle">Galle</option>
-                      <option value="Ampara">Ampara</option>
-                      <option value="Trincomalee">Trincomalee</option>
-                      <option value="Batticaloa">Batticaloa</option>
-                      <option value="Hambantota">Hambantota</option>
-                      <option value="Gampaha">Gampaha</option>
-                      <option value="Puttalam">Puttalam</option>
-                    </select>
-                  </div>
-
-                  <div className="form-group">
-                    <label htmlFor="max-fee-input">Max Entrance Fee (LKR)</label>
-                    <input
-                      id="max-fee-input"
-                      type="number"
-                      value={maxFeeFilter}
-                      placeholder="e.g. 500"
-                      onChange={(e) => setMaxFeeFilter(e.target.value)}
-                      className="input-text"
-                    />
-                  </div>
-
-                  <div className="form-group">
-                    <label htmlFor="difficulty-select">Difficulty</label>
-                    <select
-                      id="difficulty-select"
-                      value={difficultyFilter}
-                      onChange={(e) => setDifficultyFilter(e.target.value)}
-                      className="input-select"
-                    >
-                      <option value="">Any Difficulty</option>
-                      <option value="Easy">Easy</option>
-                      <option value="Moderate">Moderate</option>
-                      <option value="Strenuous">Strenuous</option>
-                    </select>
-                  </div>
-                </div>
+                <StructuredFilters
+                  categoryFilter={categoryFilter}
+                  setCategoryFilter={setCategoryFilter}
+                  districtFilter={districtFilter}
+                  setDistrictFilter={setDistrictFilter}
+                  maxFeeFilter={maxFeeFilter}
+                  setMaxFeeFilter={setMaxFeeFilter}
+                  difficultyFilter={difficultyFilter}
+                  setDifficultyFilter={setDifficultyFilter}
+                />
               </>
             )}
 
@@ -501,21 +310,7 @@ function App() {
             </button>
           </form>
 
-          <div className="presets-container">
-            <span className="presets-title">Try Example Presets:</span>
-            <div className="preset-buttons">
-              {presets.map((p, idx) => (
-                <button
-                  key={idx}
-                  onClick={() => handlePresetClick(p)}
-                  className="btn-preset"
-                  type="button"
-                >
-                  {p.label}
-                </button>
-              ))}
-            </div>
-          </div>
+          <Presets presets={presets} handlePresetClick={handlePresetClick} />
         </div>
 
         {error && (
@@ -534,210 +329,14 @@ function App() {
         )}
 
         {response && (
-          <div className="results-container">
-            {/* Show Classifier card in Hybrid mode */}
-            {response.sources_used && (
-              <div className="routing-card card glass">
-                <h3>🧠 Classifier Routing</h3>
-                <div className="routing-badges">
-                  <div className={`badge ${response.sources_used.structured ? 'active' : 'inactive'}`}>
-                    Structured {response.sources_used.structured ? '🟢' : '⚪'}
-                  </div>
-                  <div className={`badge ${response.sources_used.semantic ? 'active' : 'inactive'}`}>
-                    Semantic {response.sources_used.semantic ? '🟢' : '⚪'}
-                  </div>
-                  <div className={`badge ${response.sources_used.image ? 'active' : 'inactive'}`}>
-                    Image {response.sources_used.image ? '🟢' : '⚪'}
-                  </div>
-                </div>
-                <p className="routing-reason">{response.sources_used.reason}</p>
-              </div>
-            )}
-
-            {/* Generated LLM Answer */}
-            {response.answer && (
-              <div className="answer-card card glass">
-                <h3>🤖 Assistant Answer</h3>
-                <div className="answer-content">
-                  {response.answer}
-                </div>
-              </div>
-            )}
-
-            {/* Matched Attractions Grid */}
-            <div className="attraction-results card glass">
-              <h3>🔍 Retrieved Attractions ({attractions.length})</h3>
-              {attractions.length === 0 ? (
-                <p className="no-data">No matching attractions were retrieved.</p>
-              ) : (
-                <div className="attraction-grid">
-                  {attractions.map((attr) => (
-                    <AttractionCard 
-                      key={attr.id} 
-                      attraction={attr} 
-                      sources={response.attraction_sources ? response.attraction_sources[attr.id] : null}
-                    />
-                  ))}
-                </div>
-              )}
-            </div>
-
-            {/* Raw Context Tabs (Only for Hybrid mode) */}
-            {response.raw_results && (
-              <div className="raw-results-card card glass">
-                <div className="tabs-header">
-                  <h3>🔍 Raw Retrieval Context (by source)</h3>
-                  <div className="tab-buttons">
-                    <button
-                      onClick={() => setActiveTab('semantic')}
-                      className={`tab-btn ${activeTab === 'semantic' ? 'active' : ''}`}
-                      disabled={!response.sources_used.semantic}
-                    >
-                      Semantic Text ({response.raw_results.semantic.length})
-                    </button>
-                    <button
-                      onClick={() => setActiveTab('structured')}
-                      className={`tab-btn ${activeTab === 'structured' ? 'active' : ''}`}
-                      disabled={!response.sources_used.structured}
-                    >
-                      Structured DB ({response.raw_results.structured.length})
-                    </button>
-                    <button
-                      onClick={() => setActiveTab('image')}
-                      className={`tab-btn ${activeTab === 'image' ? 'active' : ''}`}
-                      disabled={!response.sources_used.image}
-                    >
-                      Image Matches ({response.raw_results.image?.attractions?.length || 0})
-                    </button>
-                  </div>
-                </div>
-
-                <div className="tab-content">
-                  {activeTab === 'semantic' && (
-                    <div className="attraction-grid">
-                      {response.raw_results.semantic.length === 0 ? (
-                        <p className="no-data">No semantic results retrieved.</p>
-                      ) : (
-                        response.raw_results.semantic.map((attr) => (
-                          <AttractionCard key={attr.id} attraction={attr} />
-                        ))
-                      )}
-                    </div>
-                  )}
-
-                  {activeTab === 'structured' && (
-                    <div className="attraction-grid">
-                      {response.raw_results.structured.length === 0 ? (
-                        <p className="no-data">No structured database results retrieved.</p>
-                      ) : (
-                        response.raw_results.structured.map((attr) => (
-                          <AttractionCard key={attr.id} attraction={attr} />
-                        ))
-                      )}
-                    </div>
-                  )}
-
-                  {activeTab === 'image' && (
-                    <div className="attraction-grid">
-                      {!response.raw_results.image || response.raw_results.image.attractions.length === 0 ? (
-                        <p className="no-data">No visually matching attractions retrieved.</p>
-                      ) : (
-                        response.raw_results.image.attractions.map((attr, idx) => (
-                          <AttractionCard
-                            key={attr.id}
-                            attraction={attr}
-                            imageDetail={{
-                              imageId: response.raw_results.image.image_ids[idx],
-                              distance: response.raw_results.image.distances[idx]
-                            }}
-                          />
-                        ))
-                      )}
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
-          </div>
+          <ResultsView
+            response={response}
+            attractions={attractions}
+            activeTab={activeTab}
+            setActiveTab={setActiveTab}
+          />
         )}
       </main>
-    </div>
-  )
-}
-
-function AttractionCard({ attraction, imageDetail, sources }) {
-  // Map singular category to plural directory name
-  const getCategoryFolder = (category) => {
-    if (!category) return 'waterfalls';
-    const cat = category.toLowerCase();
-    if (cat === 'beach') return 'beaches';
-    if (cat === 'mountain') return 'mountains';
-    return 'waterfalls';
-  }
-
-  // Construct image source URL
-  const imageUrl = attraction.images && attraction.images.length > 0
-    ? `http://127.0.0.1:8000/images/${getCategoryFolder(attraction.category)}/${attraction.images[0]}`
-    : null;
-
-  return (
-    <div className="attraction-card">
-      {imageUrl && (
-        <div className="attraction-card-image-container">
-          <img 
-            src={imageUrl} 
-            alt={attraction.name} 
-            className="attraction-card-image"
-            onError={(e) => {
-              // Hide image if it fails to load
-              e.target.style.display = 'none';
-            }}
-          />
-        </div>
-      )}
-      <div className="card-header">
-        <h4>{attraction.name}</h4>
-        <span className={`category-badge ${attraction.category.toLowerCase()}`}>
-          {attraction.category}
-        </span>
-      </div>
-      
-      {/* Individual card source badges */}
-      {sources && sources.length > 0 && (
-        <div className="card-source-badges">
-          {sources.map((src, i) => (
-            <span key={i} className={`card-source-badge source-${src}`}>
-              {src === 'structured' && '📊 DB'}
-              {src === 'semantic' && '📖 Semantic'}
-              {src === 'image' && '🖼️ Image Search'}
-            </span>
-          ))}
-        </div>
-      )}
-
-      <div className="card-meta">
-        <span>📍 {attraction.district}, {attraction.province}</span>
-        {attraction.entrance_fee_lkr !== undefined && (
-          <span>💵 Fee: {attraction.entrance_fee_lkr} LKR</span>
-        )}
-        {attraction.trekking_difficulty && (
-          <span>🥾 Trek: {attraction.trekking_difficulty}</span>
-        )}
-        {attraction.best_season && (
-          <span>📅 Season: {attraction.best_season}</span>
-        )}
-      </div>
-      {attraction.description && (
-        <p className="card-description">{attraction.description}</p>
-      )}
-      {imageDetail && (
-        <div className="image-match-detail">
-          <span>🖼️ Image ID: {imageDetail.imageId}</span>
-          {imageDetail.distance !== undefined && (
-            <span>Similarity: {(1 - imageDetail.distance).toFixed(4)}</span>
-          )}
-        </div>
-      )}
     </div>
   )
 }
