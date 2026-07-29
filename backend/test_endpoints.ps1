@@ -30,7 +30,7 @@ Test-Endpoint -Name "/health" -Action {
 
 # 2. Structured Query (No LLM generation)
 Test-Endpoint -Name "/query/structured (Filters only)" -Action {
-    $uri = "$baseUrl/query/structured?category=Nature&max_fee=1500&generate_answer=false"
+    $uri = "$baseUrl/query/structured?category=waterfall&max_fee=1500&generate_answer=false"
     Invoke-RestMethod -Uri $uri -Method Get
 }
 
@@ -47,19 +47,25 @@ Test-Endpoint -Name "/query/semantic" -Action {
 }
 
 # 5. Image Query (Using text_query as a Multipart Form)
-# Test-Endpoint -Name "/query/image (Text describing an image)" -Action {
-#     $form = @{
-#         text_query = "ancient buddhist temple ruins"
-#         top_k = "2"
-#         generate_answer = "true"
-#         question = "Summarize the history of these sites."
-#     }
-#     Invoke-RestMethod -Uri "$baseUrl/query/image" -Method Post -Form $form
-# }
+Test-Endpoint -Name "/query/image (Text describing an image)" -Action {
+    $res = curl.exe -s -X POST "$baseUrl/query/image?generate_answer=true" `
+        -F "text_query=ancient buddhist temple ruins" `
+        -F "top_k=2" `
+        -F "question=Summarize the history of these sites."
+    $res | ConvertFrom-Json
+}
 
-# Note: To test an actual file upload for the /query/image endpoint in PowerShell, 
-# you would adjust the form hashtable like this:
+# Note: To test an actual file upload for the /query/image endpoint in PowerShell:
 # $form = @{
 #     file = Get-Item -Path ".\path\to\test_image.jpg"
 #     generate_answer = "false"
 # }
+
+# 6. Image Query (Using actual file upload)
+Test-Endpoint -Name "/query/image (Actual Image File Upload)" -Action {
+    $res = curl.exe -s -X POST "$baseUrl/query/image?generate_answer=true" `
+        -F "file=@..\data\images\waterfalls\bambarakanda_2.jpg" `
+        -F "top_k=2" `
+        -F "question=What attraction is this and what is its height?"
+    $res | ConvertFrom-Json
+}
