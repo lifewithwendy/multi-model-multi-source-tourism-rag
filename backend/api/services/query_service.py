@@ -7,8 +7,8 @@ from sqlalchemy.orm import Session
 from backend.models.attraction import Attraction
 from backend.vector_db.chroma_client import get_text_collection, get_image_collection
 from backend.llm.groq_client import generate_rag_response
-from backend.api.query_classifier import classify_query
-from backend.api.retrieval import retrieve_structured, retrieve_semantic, retrieve_image
+from backend.api.services.query_classifier import classify_query
+from backend.api.services.retrieval import retrieve_structured, retrieve_semantic, retrieve_image
 
 
 class QueryService:

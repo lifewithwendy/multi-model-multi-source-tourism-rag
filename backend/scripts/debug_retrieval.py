@@ -7,7 +7,7 @@ from backend.database.connection import SessionLocal
 from backend.models.attraction import Attraction
 from backend.vector_db.embeddings import get_embedding_model
 from backend.vector_db.chroma_client import get_text_collection, get_image_collection
-from backend.api.retrieval import retrieve_semantic
+from backend.api.services.retrieval import retrieve_semantic
 
 db = SessionLocal()
 embedder = get_embedding_model()
