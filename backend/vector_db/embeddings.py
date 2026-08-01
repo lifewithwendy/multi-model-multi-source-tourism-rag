@@ -95,15 +95,19 @@ class JinaProvider(Embeddings):
                 "input": inputs
             }
             
-            # Retry mechanism for robust connection handling
-            for attempt in range(3):
+            # Retry mechanism for robust connection handling and rate-limiting
+            for attempt in range(5):
                 try:
                     response = self.session.post(self.url, json=data)
+                    if response.status_code == 429 or (response.status_code == 400 and "rate limit" in response.text.lower()):
+                        print(f"Jina API rate limit hit. Sleeping for 15s before attempt {attempt + 1}/5...")
+                        time.sleep(15)
+                        continue
                     if not response.ok:
                         raise RuntimeError(f"Jina API error: {response.text}")
                     break # Success
                 except requests.exceptions.ConnectionError as e:
-                    if attempt == 2:
+                    if attempt == 4:
                         raise e
                     time.sleep(2) # Wait before retry
                     
@@ -111,8 +115,8 @@ class JinaProvider(Embeddings):
             batch_embeddings = [item["embedding"] for item in res_json["data"]]
             all_embeddings.extend(batch_embeddings)
             
-            # Tiny sleep to avoid aggressive rate limiting
-            time.sleep(0.2)
+            # Sleep to avoid aggressive rate limiting
+            time.sleep(0.5)
             
         return all_embeddings
 
