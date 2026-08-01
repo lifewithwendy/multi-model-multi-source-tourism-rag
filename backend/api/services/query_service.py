@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session
 logger = logging.getLogger(__name__)
 
 from backend.models.attraction import Attraction
-from backend.vector_db.chroma_client import get_text_collection, get_image_collection
+from backend.vector_db.client import get_text_collection, get_image_collection
 from backend.api.services.query_classifier import classify_query
 from backend.api.services.retrieval import retrieve_structured, retrieve_semantic, retrieve_image
 

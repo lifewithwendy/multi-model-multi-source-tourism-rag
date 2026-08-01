@@ -7,13 +7,13 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")
 from backend.database.connection import SessionLocal
 from backend.models.attraction import Attraction
 from backend.vector_db.embeddings import get_embedding_model
-from backend.vector_db.chroma_client import get_text_collection
+from backend.vector_db.client import get_text_collection
 
 def main():
     print("Initializing embedding model...")
     embedder = get_embedding_model()
     
-    print("Connecting to ChromaDB...")
+    print("Connecting to VectorDB...")
     collection = get_text_collection()
     
     print("Fetching attractions from Postgres...")
@@ -73,7 +73,7 @@ def main():
         print(f"Computed texts for {len(documents)} attractions. Generating embeddings...")
         embeddings = embedder.embed_text(documents)
         
-        print(f"Upserting into ChromaDB {collection.name}...")
+        print(f"Upserting into VectorDB {collection.name}...")
         collection.upsert(
             ids=ids,
             embeddings=embeddings,
@@ -81,7 +81,7 @@ def main():
             metadatas=metadatas
         )
         
-        print(f"Successfully ingested {len(ids)} text documents into ChromaDB.")
+        print(f"Successfully ingested {len(ids)} text documents into VectorDB.")
         
     finally:
         db.close()

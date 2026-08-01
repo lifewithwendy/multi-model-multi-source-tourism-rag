@@ -5,7 +5,7 @@ import os
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
 
 from backend.vector_db.embeddings import get_embedding_model
-from backend.vector_db.chroma_client import get_text_collection, get_image_collection
+from backend.vector_db.client import get_text_collection, get_image_collection
 
 def extract_category(query: str) -> str:
     import os

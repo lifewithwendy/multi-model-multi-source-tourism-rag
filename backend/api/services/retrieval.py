@@ -1,7 +1,7 @@
 from typing import Optional, List, Dict, Any
 from sqlalchemy.orm import Session
 from backend.models.attraction import Attraction
-from backend.vector_db.chroma_client import get_text_collection, get_image_collection
+from backend.vector_db.client import get_text_collection, get_image_collection
 
 def retrieve_structured(db: Session, filters: Dict[str, Any]) -> List[Attraction]:
     """

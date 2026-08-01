@@ -8,13 +8,13 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")
 from backend.database.connection import SessionLocal
 from backend.models.attraction import Attraction
 from backend.vector_db.embeddings import get_embedding_model
-from backend.vector_db.chroma_client import get_image_collection
+from backend.vector_db.client import get_image_collection
 
 def main():
     print("Initializing embedding model...")
     embedder = get_embedding_model()
     
-    print("Connecting to ChromaDB...")
+    print("Connecting to VectorDB...")
     collection = get_image_collection()
     
     print("Fetching attractions from Postgres...")
@@ -85,15 +85,15 @@ def main():
         print("Generating image embeddings (this might take a while depending on the provider...)")
         embeddings = embedder.embed_images(image_paths)
         
-        print(f"Upserting into ChromaDB {collection.name}...")
+        print(f"Upserting into VectorDB {collection.name}...")
         collection.upsert(
             ids=ids,
             embeddings=embeddings,
             metadatas=metadatas,
-            # Chroma allows None for documents if embeddings are provided
+            # Chroma/Qdrant allows None for documents if embeddings are provided
         )
         
-        print(f"Successfully ingested {len(ids)} image documents into ChromaDB.")
+        print(f"Successfully ingested {len(ids)} image documents into VectorDB.")
         
     finally:
         db.close()
