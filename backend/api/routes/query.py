@@ -65,8 +65,8 @@ def query_semantic(
 def query_image(
     file: Optional[UploadFile] = File(None, description="Image file to search for visually similar attractions"),
     text_query: Optional[str] = Form(None, description="Text describing the visual features you want"),
-    top_k: int = 3,
-    generate_answer: bool = False,
+    top_k: int = Form(3, description="Number of results to retrieve"),
+    generate_answer: bool = Form(False, description="Generate LLM RAG answer if true"),
     question: Optional[str] = Form(None, description="Question for the LLM based on the visual matches"),
     db: Session = Depends(get_db),
     embedder = Depends(get_embedder)

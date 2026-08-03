@@ -187,11 +187,30 @@ CRITICAL RULES:
         if not search_res["ids"] or not search_res["ids"][0]:
             return {"results": [], "answer": "No visual matches found." if generate_answer else None}
 
+        # Filter by distance threshold to ignore irrelevant images
+        visual_threshold = float(os.getenv("VISUAL_THRESHOLD", "0.65"))
+        image_ids = search_res["ids"][0]
+        distances = search_res["distances"][0] if "distances" in search_res else []
+        
+        logger.info(f"Visual search raw matches and cosine distances: {list(zip(image_ids, distances))}")
+        
+        filtered_ids = [
+            img_id for img_id, dist in zip(image_ids, distances)
+            if dist <= visual_threshold
+        ]
+
+        if not filtered_ids:
+            logger.info(f"Image search found no matching attractions below the distance threshold of {visual_threshold}.")
+            return {
+                "results": [],
+                "answer": "The uploaded image does not appear to match any tourist attractions in our database." if generate_answer else None
+            }
+
         # Extract unique attraction IDs (image ids are stored as {attraction_id}_{idx})
-        attr_ids = list(set([str(i).split('_')[0] for i in search_res["ids"][0]]))
+        attr_ids = list(set([str(i).split('_')[0] for i in filtered_ids]))
 
         results = db.query(Attraction).filter(Attraction.id.in_(attr_ids)).all()
-        logger.info(f"Image search found {len(results)} matching attractions.")
+        logger.info(f"Image search found {len(results)} matching attractions after threshold filtering (kept IDs: {filtered_ids}).")
 
         response = {"results": [r.to_dict() for r in results]}
 
@@ -203,6 +222,7 @@ CRITICAL RULES:
             response["answer"] = cls._get_rag_chain().invoke({"context": context, "question": llm_question})
 
         return response
+
 
     @classmethod
     def query_hybrid(
@@ -316,11 +336,11 @@ CRITICAL RULES:
             # Use query if provided, else fall back to a generic prompt
             llm_question = query if query else "Describe the matching attractions visually similar to the uploaded image."
             logger.info(f"Hybrid RAG answering using merged context...")
-            response["answer"] = cls._get_rag_chain().invoke({"context": context, "question": llm_question})
+            answer = cls._get_rag_chain().invoke({"context": context, "question": llm_question})
 
         # 5. Format response payload
         response = {
-            "answer": response.get("answer", "No matching attractions found to answer your query."),
+            "answer": answer,
             "sources_used": sources_used,
             "attraction_sources": attraction_sources,
             "raw_results": {
